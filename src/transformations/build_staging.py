@@ -27,14 +27,26 @@ def build_staging():
             FROM raw.trips_incremental
         """)
 
+
+        # Separate incoming incremental records.
+        con.execute("""
+            CREATE OR REPLACE TABLE staging.trips_incremental AS
+
+            SELECT
+                *,
+                'incremental' AS source_dataset
+            FROM raw.trips_incremental
+        """)
+
         # Validate the combined record count
         result = con.sql("""
-            SELECT
-                source_dataset,
-                COUNT(*) AS total_records
+            SELECT 'Combined staging' AS dataset, COUNT(*) AS total_records
             FROM staging.trips_union
-            GROUP BY source_dataset
-            ORDER BY source_dataset
+
+            UNION ALL
+
+            SELECT 'Incremental staging', COUNT(*)
+            FROM staging.trips_incremental
         """).df()
 
         print("Staging union created successfully!")

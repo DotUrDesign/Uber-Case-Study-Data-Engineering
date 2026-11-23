@@ -17,9 +17,29 @@ def build_weekly_metrics():
         result = con.sql("""
             SELECT
                 COUNT(*) AS total_rows,
+
                 SUM(trip_volume) AS total_trips,
-                ROUND(AVG(average_trip_price), 2)
-                    AS avg_of_weekly_area_prices
+
+                SUM(price_observation_count) AS priced_trips,
+
+                ROUND(SUM(total_trip_price), 2) AS total_trip_price,
+
+                ROUND(
+                    SUM(total_trip_price) /
+                    NULLIF(SUM(price_observation_count), 0),
+                    2
+                ) AS overall_average_trip_price,
+
+                SUM(matched_trip_count) AS matched_trips,
+
+                SUM(eligible_trip_count) AS eligible_shared_trips,
+
+                ROUND(
+                    100.0 * SUM(matched_trip_count) /
+                    NULLIF(SUM(eligible_trip_count), 0),
+                    2
+                ) AS overall_shared_trip_rate
+
             FROM analytics.fact_weekly_mobility_metrics
         """).df()
 

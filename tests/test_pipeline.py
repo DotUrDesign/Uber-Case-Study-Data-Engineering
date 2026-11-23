@@ -17,14 +17,14 @@ def con():
 
 
 def test_fact_trip_ids_are_unique(con):
-    result = con.execute("""
+    total, unique_ids = con.execute("""
         SELECT
-            COUNT(*) AS total,
-            COUNT(DISTINCT trip_id) AS unique_ids
+            COUNT(*),
+            COUNT(DISTINCT trip_id)
         FROM analytics.fact_trips
     """).fetchone()
 
-    assert result[0] == result[1]
+    assert total == unique_ids
 
 
 def test_fact_trips_have_valid_timestamps(con):
@@ -51,9 +51,13 @@ def test_weekly_metric_grain_is_unique(con):
     duplicate_count = con.execute("""
         SELECT COUNT(*)
         FROM (
-            SELECT week_start_date, pickup_community_area_key
+            SELECT
+                week_start_date,
+                pickup_community_area_key
             FROM analytics.fact_weekly_mobility_metrics
-            GROUP BY week_start_date, pickup_community_area_key
+            GROUP BY
+                week_start_date,
+                pickup_community_area_key
             HAVING COUNT(*) > 1
         ) duplicates
     """).fetchone()[0]
@@ -67,20 +71,45 @@ def test_weekly_metrics_match_fact_trips(con):
             SELECT
                 d.week_start_date,
                 t.pickup_community_area_key,
+
                 COUNT(DISTINCT t.trip_id) AS trip_volume,
-                AVG(t.trip_total) AS average_trip_price,
+
+                SUM(t.trip_total) AS total_trip_price,
+
+                COUNT(t.trip_total) AS price_observation_count,
+
+                ROUND(
+                    SUM(t.trip_total) /
+                    NULLIF(COUNT(t.trip_total), 0),
+                    2
+                ) AS average_trip_price,
+
                 COUNT(*) FILTER (
                     WHERE t.shared_trip_match = TRUE
                 ) AS matched_trip_count,
+
+                COUNT(*) FILTER (
+                    WHERE t.shared_trip_match IS NOT NULL
+                ) AS eligible_trip_count,
+
                 ROUND(
                     100.0 * COUNT(*) FILTER (
                         WHERE t.shared_trip_match = TRUE
-                    ) / COUNT(*), 2
+                    ) /
+                    NULLIF(
+                        COUNT(*) FILTER (
+                            WHERE t.shared_trip_match IS NOT NULL
+                        ), 0
+                    ),
+                    2
                 ) AS shared_trip_rate
+
             FROM analytics.fact_trips t
             JOIN analytics.dim_date d
                 ON t.pickup_date_key = d.date_key
+
             WHERE t.pickup_community_area_key IS NOT NULL
+
             GROUP BY
                 d.week_start_date,
                 t.pickup_community_area_key
@@ -105,3 +134,37 @@ def test_weekly_metrics_match_fact_trips(con):
     """).fetchone()[0]
 
     assert differences == 0
+
+
+def test_initial_pipeline_is_completed(con):
+    result = con.execute("""
+        SELECT initial_load_completed
+        FROM ops.pipeline_state
+        WHERE pipeline_name = 'trusted_mobility_metrics'
+    """).fetchone()
+
+    assert result is not None
+    assert result[0] is True
+
+
+def test_last_successful_batch_is_successful(con):
+    result = con.execute("""
+        SELECT b.batch_status
+        FROM ops.pipeline_state p
+        JOIN ops.batch_log b
+            ON p.last_successful_batch_id = b.batch_id
+        WHERE p.pipeline_name = 'trusted_mobility_metrics'
+    """).fetchone()
+
+    assert result is not None
+    assert result[0] == "SUCCESS"
+
+
+def test_fact_trips_have_no_missing_pickup_area(con):
+    missing_count = con.execute("""
+        SELECT COUNT(*)
+        FROM analytics.fact_trips
+        WHERE pickup_community_area_key IS NULL
+    """).fetchone()[0]
+
+    assert missing_count == 0
