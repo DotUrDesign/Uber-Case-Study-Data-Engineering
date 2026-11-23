@@ -1,75 +1,69 @@
 # AI Use Guidance
 
-## 1. AI Tools Used
+## Overview
 
-Generative AI (ChatGPT) was used as an assistance tool during the development of this project.
+ChatGPT was used as a supporting tool throughout the development of this project. It helped evaluate technical approaches, translate requirements into implementation logic, troubleshoot issues, and support testing.
 
-It was used for:
-- Discussing pipeline architecture and data engineering design decisions.
-- Understanding DuckDB SQL and Python implementation approaches.
-- Identifying potential data quality issues and duplicate-handling strategies.
-- Debugging implementation errors.
-- Designing automated validation tests.
-- Improving project documentation.
+The business requirements, project objectives, and expected pipeline behaviour were defined through my understanding and analysis of the case study. ChatGPT assisted in implementing and validating those requirements.
 
-## 2. How AI Assistance Was Applied
+## Areas Where AI Was Used
 
-AI assistance was used across the following areas:
+### 1. Technology Selection and Design Decisions
 
-| Area | AI Assistance |
-|---|---|
-| Architecture | Discussed Raw, Staging, and Trusted data layers |
-| Ingestion | Reviewed approaches for loading initial and incremental data |
-| Data quality | Discussed duplicate detection, timestamp validation, and quarantine handling |
-| Data modeling | Discussed business keys, dimensions, fact tables, and weekly metric grain |
-| SQL and Python | Assisted with implementation and debugging |
-| Testing | Helped design automated data quality and reconciliation tests |
-| Documentation | Assisted in preparing README and project documentation |
+ChatGPT helped evaluate technology options and prioritize tools based on the project's requirements, complexity, and scale.
 
-## 3. Design Decisions and Independent Validation
+Key decisions included:
 
-AI-generated suggestions were treated as recommendations rather than authoritative answers.
+- **DuckDB:** Selected as a lightweight analytical database that could handle the project's SQL-based transformations without requiring a separate database server.
+- **Python and SQL:** Used for ingestion, transformations, validation, and pipeline orchestration.
+- **Parquet:** Used as the storage format for efficient analytical data processing.
+- **Pytest:** Used to automate pipeline and data quality checks.
 
-Important implementation decisions were checked against the supplied data and actual pipeline results.
+Alternative technologies such as Apache Spark and dedicated orchestration platforms were considered less necessary for this case study, as they would introduce additional infrastructure and complexity without providing significant benefits for the current requirements.
 
-Examples:
+### 2. Implementation and Technical Problem-Solving
 
-- The business key was established as `trip_id`.
-- Duplicate records were analyzed before implementing deduplication.
-- The community area dimension was expanded to include distinct non-null pickup and dropoff area IDs observed in validated trip data, rather than relying only on the limited reference records.
-- Missing dropoff area keys were investigated to distinguish genuine source nulls from unmatched dimension records.
-- A deterministic full-refresh strategy was selected for the supplied inputs instead of introducing unnecessary orchestration or distributed processing infrastructure.
+ChatGPT assisted with:
 
-## 4. Validation Performed
+- Translating pipeline requirements into Python and SQL implementations.
+- Developing reusable staging and transformation logic.
+- Implementing incremental loading, duplicate classification, and conflict handling.
+- Designing batch tracking and idempotency mechanisms.
+- Troubleshooting implementation issues and reviewing alternative approaches.
 
-The implementation was validated through:
+### 3. Scenario Identification and Test Design
 
-1. Inspecting initial and incremental source data.
-2. Analyzing duplicate records and overlaps between deliveries.
-3. Checking invalid timestamp records.
-4. Comparing source and trusted record counts.
-5. Validating fact table uniqueness.
-6. Checking weekly metric grain uniqueness.
-7. Reconciling weekly metric trip counts with trusted fact records.
-8. Executing the complete pipeline twice and comparing the results.
-9. Running the automated pytest suite.
+The business scenarios and expected outcomes were identified through project analysis. ChatGPT helped translate these scenarios into implementation logic and validation checks.
 
-The automated test suite contains five tests, all of which passed during the final validation run.
+Examples include:
 
-## 5. Limitations and Risks Considered
+- Handling duplicate records within and across data sources.
+- Identifying new, identical, and conflicting incremental records.
+- Handling missing geographical attributes.
+- Quarantining records with invalid timestamps.
+- Retaining and diagnosing duration discrepancies.
+- Processing late-arriving records and refreshing affected weekly metrics.
+- Preventing successful batches from being processed again.
 
-During development, some initial assumptions required further investigation.
+### 4. Testing and Validation
 
-For example, the supplied community area reference data did not contain every area ID observed in trip records. The dimension-building logic was therefore adjusted to include all distinct non-null pickup and dropoff IDs observed in validated trip data.
+ChatGPT assisted in developing and reviewing SQL validation queries and Pytest test cases.
 
-Missing dropoff area keys were also investigated. The analysis showed that these corresponded to source null values rather than unmatched non-null area IDs.
+The validation covered:
 
-The pipeline currently uses a deterministic full-refresh approach. A production implementation handling continuous deliveries would require additional mechanisms such as persistent ingestion state, incremental merge logic, monitoring, and recovery controls.
+- Uniqueness of trip records.
+- Timestamp validity.
+- Quarantine of invalid records.
+- Uniqueness of weekly metric records.
+- Reconciliation of aggregated metrics with the trusted fact table.
+- Pipeline state and batch execution status.
 
-## 6. Human Responsibility
+## Review and Responsibility
 
-AI assistance did not replace validation or engineering judgment.
+AI-generated suggestions and code were reviewed against the project requirements and expected business behaviour. The pipeline was executed locally, database outputs were inspected, and automated tests were run to validate the implementation.
 
-The final implementation, business rules, data quality checks, and execution results were reviewed against the supplied dataset and assignment requirements.
+Final decisions regarding project requirements, technical choices, implementation review, and validation remained my responsibility.
 
-The developer remains responsible for the correctness, reliability, and maintainability of the submitted solution.
+## Summary
+
+ChatGPT was used as a technical assistant across technology evaluation, solution design, implementation, troubleshooting, and testing. It helped accelerate development while keeping the solution aligned with the requirements and avoiding unnecessary technical complexity.
